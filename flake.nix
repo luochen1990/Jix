@@ -5,7 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
-  outputs = { nixpkgs }:
+  outputs = { self, nixpkgs }:
   let
     project_name = "jix";
     supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
@@ -16,12 +16,12 @@
     });
   in
   rec {
-    packages = eachSystem ({hpkgs}: {
+    packages = eachSystem ({hpkgs, ...}: {
       default = hpkgs.callCabal2nix project_name ./. { };
     });
 
-    devShells = eachSystem ({pkgs, hpkgs}: {
-      default = pkgs.haskell.lib.addBuildTools packages.default
+    devShells = eachSystem ({pkgs, hpkgs, system, ...}: {
+      default = pkgs.haskell.lib.addBuildTools packages.${system}.default
         (with hpkgs; [ haskell-language-server cabal-install ]);
     });
   };
