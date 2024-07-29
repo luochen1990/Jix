@@ -12,7 +12,7 @@
     eachSystem = f: nixpkgs.lib.genAttrs supportedSystems (system: f rec {
       inherit system;
       pkgs = nixpkgs.legacyPackages.${system};
-      hpkgs = pkgs.haskell.packages.ghc96;
+      hpkgs = pkgs.haskell.packages.ghc98;
     });
   in
   rec {
