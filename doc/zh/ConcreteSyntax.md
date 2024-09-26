@@ -23,7 +23,7 @@ expr ===>  expr    代表解糖/等价变换
 [1, 2, 3, ]  --->  [1, 2, 3]
 ```
 
-对象内换行可替代逗号:
+对象内换行可替代逗号 (多行表达式可以加括号) (待定):
 
 ```js
 {
@@ -41,7 +41,7 @@ expr ===>  expr    代表解糖/等价变换
 }
 ```
 
-### 表达式,变量,函数
+### 表达式,变量
 
 运算:
 
@@ -81,20 +81,6 @@ b = "y";
 {(a): 1, (b): 2}  --->  {"x": 1, "y": 2}
 ```
 
-在对象值中内嵌变量:
-
-```js
-name = "xyz";
-{say: ("hello, $(name)")}  --->  {"say": "hello, xyz"}
-```
-
-在对象键中内嵌变量:
-
-```js
-id = 123;
-{("No.$(id)"): 99}  --->  {"No.123": 99}
-```
-
 在对象值中引用对象内的其他字段 (被引用字段需用=而不是:定义):
 
 ```js
@@ -111,7 +97,98 @@ id = 123;
 }
 ```
 
-函数:
+### 文本字面量
+
+在文本（对象值）中内嵌变量 (f-string):
+
+```js
+name = "xyz";
+{say: (f"hello, $(name)")}  --->  {"say": "hello, xyz"}
+```
+
+在文本（对象键）中内嵌变量 (f-string):
+
+```js
+id = 123;
+{(f"No.$(id)"): 99}  --->  {"No.123": 99}
+```
+
+多行文本
+
+```js
+txt = """
+    hello
+    this is a
+    log text
+"""
+```
+
+在多行文本中内嵌变量 (f-string):
+
+```js
+name = "abc";
+txt = f"""
+    hello
+    my name
+    is $(name)
+"""
+```
+
+转义字符
+
+```js
+txt = "hello\nabc";
+txt  ---> "hello\nabc"
+```
+
+单引号文本，不支持转义字符
+
+```js
+txt = 'hello\nabc';
+txt  ---> "hello\\nabc"
+```
+
+单引号多行字符串，完全原样录入
+
+```js
+txt = '''
+    hello\n my name
+    is \t$(name)
+'''  --->  "hello\\n my name\nis \\t$(name)"
+```
+
+(高级功能) 显式 f-string，可以修改变量嵌入标志字符:
+
+```js
+name = "abc";
+txt = f@"""
+    echo hello, @(name), today is $(datetime)
+"""
+```
+
+(高级功能) Guest语言语法高亮支持:
+
+```js
+name = "abc";
+txt = f@"""bash
+    echo hello, @(name), today is $(datetime)
+"""
+```
+
+小结
+
+| 多行 | 可嵌入变量 | 支持转义字符 | 语法         |
+| ---- | ---------- | ------------ | ------------ |
+| No   | No         | Yes          | " ... "      |
+| No   | No         | No           | ' ... '      |
+| No   | Yes        | Yes          | f" ... "     |
+| No   | Yes        | No           | f' ... '     |
+| Yes  | No         | Yes          | """ ... """  |
+| Yes  | No         | No           | ''' ... '''  |
+| Yes  | Yes        | Yes          | f""" ... """ |
+| Yes  | Yes        | No           | f''' ... ''' |
+
+### 函数
 
 ```js
 f = ?a (a + 1);
@@ -407,7 +484,7 @@ for (range 10) (?n (for (range 100) (?m (opt (f n) m))))
 ===>  for (range 10) (?n (_g = (f n); for (range 100) (?m (_g m))))
 ```
 
-### 委派 (WIP)
+### 委派 (待定)
 
 ```js
 
