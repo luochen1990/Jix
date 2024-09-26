@@ -11,13 +11,13 @@ expr ===>  expr    代表解糖/等价变换
 
 对象键可省略引号:
 
-```json
+```js
 {x: 1, y: 2}  --->  {"x": 1, "y": 2}
 ```
 
 容忍冗余逗号:
 
-```json
+```js
 {x: 1, y: 2, }  --->  {"x": 1, "y": 2}
 
 [1, 2, 3, ]  --->  [1, 2, 3]
@@ -25,7 +25,7 @@ expr ===>  expr    代表解糖/等价变换
 
 对象内换行可替代逗号:
 
-```json
+```js
 {
   x: 1
   y: 2
@@ -34,7 +34,7 @@ expr ===>  expr    代表解糖/等价变换
 
 行内注释:
 
-```json
+```js
 {
   x: 1 #x的值
   y: 2 #y的值
@@ -45,13 +45,13 @@ expr ===>  expr    代表解糖/等价变换
 
 运算:
 
-```json
+```js
 (1 + 1)  --->  2
 ```
 
 在对象和数组中使用运算:
 
-```json
+```js
 {x: 1, y: (1 + 1)}  --->  {"x": 1, "y": 2}
 
 [1, 2, 3, (1 + 3)]  --->  [1, 2, 3, 4]
@@ -59,7 +59,7 @@ expr ===>  expr    代表解糖/等价变换
 
 变量（let绑定）:
 
-```json
+```js
 a = 1; (a)  --->  1
 
 a = 1; b = 2; (a + b)  --->  3
@@ -67,7 +67,7 @@ a = 1; b = 2; (a + b)  --->  3
 
 在对象值中引用变量:
 
-```json
+```js
 a = 1;
 b = 2;
 {x: (a), y: (b)}  --->  {"x": 1, "y": 2}
@@ -75,7 +75,7 @@ b = 2;
 
 在对象键中引用变量:
 
-```json
+```js
 a = "x";
 b = "y";
 {(a): 1, (b): 2}  --->  {"x": 1, "y": 2}
@@ -83,21 +83,21 @@ b = "y";
 
 在对象值中内嵌变量:
 
-```json
+```js
 name = "xyz";
 {say: ("hello, $(name)")}  --->  {"say": "hello, xyz"}
 ```
 
 在对象键中内嵌变量:
 
-```json
+```js
 id = 123;
 {("No.$(id)"): 99}  --->  {"No.123": 99}
 ```
 
 在对象值中引用对象内的其他字段 (被引用字段需用=而不是:定义):
 
-```json
+```js
 {
     pname = "hello";
     version = "0.1.0";
@@ -113,7 +113,7 @@ id = 123;
 
 函数:
 
-```json
+```js
 f = ?a (a + 1);
 (f 2)  --->  3
 
@@ -128,7 +128,7 @@ h = ?a ?b (c = a + b; c);
 
 带类型声明的函数:
 
-```json
+```js
 f = ?a ?b (
     c: Int
         = a + b;
@@ -160,7 +160,7 @@ u = ?a: Int ?b: Int (
 
 定义对象类型:
 
-```json
+```js
 Student = @{name: String, age: Int};
 s : Student = {name: "Alice", age: 18};
 (s)  --->  {"name": "Alice", "age": 18}
@@ -168,13 +168,13 @@ s : Student = {name: "Alice", age: 18};
 
 对象类型中的缺省类型:
 
-```json
+```js
 Nixpkgs = @{haskellPackages: Dict Drv, ...: Drv};
 ```
 
 定义元组类型:
 
-```json
+```js
 Student = @[String, Int];
 s : Student = ["Alice", 18];
 (s)  --->  ["Alice", 18]
@@ -182,21 +182,21 @@ s : Student = ["Alice", 18];
 
 字典类型:
 
-```json
+```js
 students : Dict Int = {"Alice": 18, "Bob": 19};
 (students)  --->  {"Alice": 18, "Bob": 19}
 ```
 
 列表类型:
 
-```json
+```js
 students : List String = ["Alice", "Bob"];
 (students)  --->  ["Alice", "Bob"]
 ```
 
 集合类型:
 
-```json
+```js
 students : Set String = ["Alice", "Bob"];
 (students)  --->  ["Alice", "Bob"]
 
@@ -207,7 +207,7 @@ ys : Set Int = [3 2 1];
 
 类型修饰(refinement):
 
-```json
+```js
 Score = Int ^{check: ?x (x >= 0 and x <= 100)};
 x : Score = 90;
 (x)  --->  90
@@ -215,7 +215,7 @@ x : Score = 90;
 
 Or
 
-```json
+```js
 Score = Int ^{
     checks: [
         {check: ?x (x >= 0), message: "should be positive"},
@@ -228,7 +228,7 @@ x : Score = 90;
 
 对象类型中的计算字段:
 
-```json
+```js
 Student = @{
   name: String
   age: Int
@@ -240,13 +240,13 @@ s : Student = {name: "Alice", age: 18};
 
 Sum Type (Disjoint/Discriminated Union):
 
-```json
+```js
 Bool : Type = "True" | "False"
 ```
 
 泛型:
 
-```json
+```js
 Nat : Type = fix ?n ( *["Succ", n] | "Zero" )
 
 List : Type -> Type = ?a (fix ?l ( *["Cons", a, (l a)] | "Nil"));
@@ -256,7 +256,7 @@ List : Type -> Type = ?a (fix ?l ( *["Cons", a, (l a)] | "Nil"));
 
 可合并类型:
 
-```json
+```js
 Score : Type = Int ^{
     check: ?x (x >= 0 and x <= 100),
     merge2: ?x ?y (assume x == y; x)
@@ -274,13 +274,13 @@ ys : MergeList Int = [3 4];
 
 对于未定义合并策略的类型，如 Int 等基本类型, 默认合并策略是，assume所有赋值都相等，并返回其一，如果未赋值或不相等则合并失败
 
-```json
+```js
 Int ===> Int ^{merge2: ?x ?y (assume x == y; x)};
 ```
 
 除非自定义合并策略
 
-```json
+```js
 SumInt ===> Int ^{merge2: ?x ?y (x + y), empty: 0};
 
 MergeSet = %a (Set a ^{merge: ?xs (union xs)});
@@ -292,7 +292,7 @@ MergeDict = %a (Dict a ^{merge: ?xs (unionDict xs)});
 
 列表
 
-```json
+```js
 xs : MergeList Int;
 xs = [1 2];
 xs = [3 4];
@@ -301,7 +301,7 @@ xs = [3 4];
 
 对象
 
-```json
+```js
 cfg : Config;
 cfg.a = 1;
 cfg.b = 2;
@@ -320,7 +320,7 @@ cfg
 
 错误处理（assert关键字）:
 
-```json
+```js
 quicksort = ?xs (
     ys = quicksort-impl xs;
     assert ys == mergesort xs;
@@ -331,7 +331,7 @@ quicksort = ?xs (
 
 错误处理（error关键字）:
 
-```json
+```js
 quicksort = ?xs (
     ys = quicksort-impl xs;
     if (ys /= mergesort xs)
@@ -343,7 +343,7 @@ quicksort = ?xs (
 
 错误处理, impossible 关键字, 用于逻辑上不可达的分支: 如果通过静态分析能确认它确实不可达, 则可以优化掉; 若无法确认, 则需要生成对应的运行时报错代码
 
-```json
+```js
 (if x >= 0 then 1 elif x < 0 then -1 else impossible)
 ```
 
@@ -351,7 +351,7 @@ quicksort = ?xs (
 
 错误处理（assume关键字）:
 
-```json
+```js
 div = ?a ?b (
     assume b != 0;
     a // b
@@ -361,7 +361,7 @@ div = ?a ?b (
 
 错误处理（blame关键字）:
 
-```json
+```js
 div = ?a ?b (
     if b == 0 then blame "The divisor cannot be zero" else a // b
 );
@@ -372,7 +372,7 @@ div = ?a ?b (
 
 错误处理（deflect关键字）:
 
-```json
+```js
 quicksort = ?xs (
     ys = deflect (quicksort-impl xs);
     ys
@@ -386,13 +386,13 @@ quicksort = ?xs (
 
 opt 关键字用于AOT计算:
 
-```json
+```js
 x = opt (fib 20); x
 ```
 
 opt 关键字用于JIT编译:
 
-```json
+```js
 f = ?a ?b (fib a + b);
 g = opt (f 2)   ===>   g = ?b (fib 2 + b)
 
@@ -402,14 +402,14 @@ g = opt (f 2)   ===>   g = ?b (4 + b);
 
 复杂一点的例子 (不太确定能不能自动优化，也许需要手动重写为let形式)
 
-```json
+```js
 for (range 10) (?n (for (range 100) (?m (opt (f n) m))))
 ===>  for (range 10) (?n (_g = (f n); for (range 100) (?m (_g m))))
 ```
 
 ### 委派 (WIP)
 
-```json
+```js
 
 div = ?(a: Int) ?(b: Int) (c: Int = a // b; c);
 div = ?(a: Float) ?(b: Float) (c: Float = a // b; c);
