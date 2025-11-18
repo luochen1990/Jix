@@ -1,9 +1,9 @@
 语法示例
 -------
 
-说明:
-expr --->  expr    代表求值/规约
-expr ===>  expr    代表解糖/等价变换
+本文档中所使用的符号说明:
+- expr --->  expr    代表求值/规约到 JSON Normal Form
+- expr ===>  expr    代表解糖/等价变换到另一个 Jix 表达式
 
 ----------------------------------
 
@@ -23,7 +23,7 @@ expr ===>  expr    代表解糖/等价变换
 [1, 2, 3, ]  --->  [1, 2, 3]
 ```
 
-对象内换行可替代逗号 (多行表达式可以加括号) (待定):
+在对象内换行时，逗号可省略:
 
 ```js
 {
@@ -89,7 +89,19 @@ b = "y";
     version = "0.1.0";
     name: (pname ++ "-" ++ version)
 }
+===>
+let
+    pname = "hello";
+    version = "0.1.0";
+in
+{
+    pname: (pname)
+    version: (version)
+    name: (pname ++ "-" ++ version)
+}
+```
 
+```js
 {
     host = "127.0.0.1";
     port = "80";
@@ -113,14 +125,16 @@ id = 123;
 {(f"No.$(id)"): 99}  --->  {"No.123": 99}
 ```
 
-多行文本
+多行文本 (语法类似python 三引号，但解析逻辑类似 nix 会消除公共缩进)
 
 ```js
 txt = """
     hello
     this is a
-    log text
+    long text
 """
+---> "hello\nthis is a\nlong text"
+
 ```
 
 在多行文本中内嵌变量 (f-string):
@@ -157,7 +171,7 @@ txt = '''
 '''  --->  "hello\\n my name\nis \\t$(name)"
 ```
 
-(高级功能) 显式 f-string，可以修改变量嵌入标志字符:
+(高级功能) 显式 f-string，可以修改变量嵌入标志字符（默认 $，支持修改为 @,#,$,%,^,&,*):
 
 ```js
 name = "abc";
@@ -191,54 +205,32 @@ txt = f@"""bash
 ### 函数
 
 ```js
-f = ?a (a + 1);
+f = λa (a + 1);
 (f 2)  --->  3
 
-g = ?a ?b (a + b);
+g = λa λb (a + b);
 (g 1 2)  --->  3
 
-h = ?a ?b (c = a + b; c);
+h = λa λb (c = a + b; c);
 (h 1 2)  --->  3
 ```
 
-### 类型
-
-带类型声明的函数:
+### 基本类型
 
 ```js
-f = ?a ?b (
-    c: Int
-        = a + b;
-    c
-);
-(f 1 2)  --->  3
-
-g = ?a: Int ?b: Int (
-    c: Int
-        = a + b;
-    c
-);
-(g 1 2)  --->  3
-
-h = ?a: Int ?b: Int (
-    c: @{x: Int, y: Int}
-        = {x: a, y: b};
-    c
-);
-(h 1 2)  --->  3
-
-u = ?a: Int ?b: Int (
-    c: Int = a + 1;
-    d: Int = b + 2;
-    {x: c, y: d}
-);
-(u 1 2)  --->  3
+a_str_example : str = "hello";
+a_bool_example : bool = true;
+a_int_example : int = 1;
+a_float_example : float = 1.414;
+a_null_example : nil = null;
 ```
 
-定义对象类型:
+### 复合类型
+
+定义对象类型(product type 的一种):
 
 ```js
-Student = @{name: String, age: Int};
+Student : Type = *{name: String, age: Int};
 s : Student = {name: "Alice", age: 18};
 (s)  --->  {"name": "Alice", "age": 18}
 ```
@@ -246,13 +238,17 @@ s : Student = {name: "Alice", age: 18};
 对象类型中的缺省类型:
 
 ```js
-Nixpkgs = @{haskellPackages: Dict Drv, ...: Drv};
+Nixpkgs = *{
+    haskellPackages: Dict Drv,
+    ...: Drv
+};
+pkgs : Nixpkgs = ...;
 ```
 
-定义元组类型:
+定义元组类型(product type的另一种):
 
 ```js
-Student = @[String, Int];
+Student : Type = *[String, Int];
 s : Student = ["Alice", 18];
 (s)  --->  ["Alice", 18]
 ```
@@ -282,51 +278,90 @@ ys : Set Int = [3 2 1];
 (xs == ys)  --->  true
 ```
 
+### 函数类型
+
+声明函数的返回值类型:
+
+```js
+f = λa λb (
+    c: Int
+        = a + b;
+    c
+);
+(f 1 2)  --->  3
+
+声明函数的参数和返回值类型:
+
+g = λa: Int λb: Int (
+    c: Int
+        = a + b;
+    c
+);
+(g 1 2)  --->  3
+
+函数的返回值类型为对象类型:
+
+h = λa: Int λb: Int (
+    c: *{x: Int, y: Int}
+        = {x: (a), y: (b)};
+    c
+);
+(h 1 2)  --->  {x: 1, y: 2}
+
+分别声明返回值对象中的每个字段类型:
+
+u = λa: Int λb: Int (
+    c: Int = a + 1;
+    d: Int = b + 2;
+    {x: (c), y: (d)}
+);
+(u 1 2)  --->  {x: 2, y: 4}
+```
+
+### 高阶类型特性
+
 类型修饰(refinement):
 
 ```js
-Score = Int ^{check: ?x (x >= 0 and x <= 100)};
+Score = Int ^{check: λx (x >= 0 and x <= 100)};
 x : Score = 90;
 (x)  --->  90
 ```
 
-Or
+类型修饰, 使用多个判定函数以优化报错信息:
 
 ```js
 Score = Int ^{
     checks: [
-        {check: ?x (x >= 0), message: "should be positive"},
-        {check: ?x (x <= 100), message: "should be less than 100"}
+        {check: λx (x >= 0), message: "should be positive"},
+        {check: λx (x <= 100), message: "should be less than 100"}
     ]
 };
 x : Score = 90;
 (x)  --->  90
 ```
 
-对象类型中的计算字段:
+和类型 (Sum Type / Disjoint Union / Discriminated Union):
 
 ```js
-Student = @{
-  name: String
-  age: Int
-  id: Sha256 = hash name <+> hash age
-};
-s : Student = {name: "Alice", age: 18};
-(s) --->  {"name": "Alice", "age": 18, "id": "eropupuahasdkzxchoqnjdas"}
+Boolean : Type = "True" | "False"
 ```
 
-Sum Type (Disjoint/Discriminated Union):
+递归类型 (μ):
 
 ```js
-Bool : Type = "True" | "False"
+Nat : Type = μn ( "Zero" | *["Succ", n] )
+
+// Nat ≜ μ n. 1 | n
 ```
 
-泛型:
+泛型 (Λ):
 
 ```js
-Nat : Type = fix ?n ( *["Succ", n] | "Zero" )
+List : Type -> Type = Λa (μl ("Nil" | *["Cons", a, (l a)]));
 
-List : Type -> Type = ?a (fix ?l ( *["Cons", a, (l a)] | "Nil"));
+// List ≜ Λ A. μ L. 1 | (A × L A)
+
 ```
 
 ### 合并
@@ -335,13 +370,13 @@ List : Type -> Type = ?a (fix ?l ( *["Cons", a, (l a)] | "Nil"));
 
 ```js
 Score : Type = Int ^{
-    check: ?x (x >= 0 and x <= 100),
-    merge2: ?x ?y (assume x == y; x)
+    check: λx (x >= 0 and x <= 100),
+    merge2: λx λy (assume x == y; x)
 };
 x : Score = 90;
 (x)  --->  90
 
-MergeList : Type -> Type = ?a ( List a ^{merge: ?xs (concat xs)} );
+MergeList : Type -> Type = Λa ( List a ^{merge: λxs (concat xs)} );
 xs : MergeList Int = [1 2];
 ys : MergeList Int = [3 4];
 (x <+> y)  --->  [1 2 3 4]
@@ -352,43 +387,63 @@ ys : MergeList Int = [3 4];
 对于未定义合并策略的类型，如 Int 等基本类型, 默认合并策略是，assume所有赋值都相等，并返回其一，如果未赋值或不相等则合并失败
 
 ```js
-Int ===> Int ^{merge2: ?x ?y (assume x == y; x)};
+Int ===> Int ^{merge2: λx λy (assume x == y; x)};
 ```
 
 除非自定义合并策略
 
 ```js
-SumInt ===> Int ^{merge2: ?x ?y (x + y), empty: 0};
+SumInt ===> Int ^{merge2: λx λy (x + y), empty: 0};
 
-MergeSet = %a (Set a ^{merge: ?xs (union xs)});
-
-MergeDict = %a (Dict a ^{merge: ?xs (unionDict xs)});
+MergeSet = Λa (Set a ^{merge: λxs (union xs)});
+MergeDict = Λa (Dict a ^{merge: λxs (unionDict xs)});
 ```
 
-重复声明等价于合并，但要求先标注类型:
+### 类 Nix 语法糖
 
-列表
+深度嵌套的对象赋值
 
 ```js
-xs : MergeList Int;
-xs = [1 2];
-xs = [3 4];
-(xs)  --->  [1 2 3 4]
+{
+    a.x.u = 1;
+}
+===>
+{
+    a = {
+        x = {
+            u = 1;
+        };
+    };
+}
 ```
 
-对象
+混合多种风格的对象赋值情形
 
 ```js
-cfg : Config;
 cfg.a = 1;
 cfg.b = 2;
+cfg.c.x = 42;
+cfg.c.y = {u = 1; v = "hello"; t.op = 3};
+cfg.c.y.w = "haha";
 cfg
 
 ===>
 
-cfg : Config;
-cfg = {a = 1} <+> {b = 2};
-cfg
+{
+    a = 1;
+    b = 2;
+    c = {
+        x = 42;
+        y = {
+            u = 1;
+            v = "hello";
+            t = {
+                op = 3;
+            }
+            w = "haha";
+        };
+    };
+};
 ```
 
 ### 错误处理
@@ -398,9 +453,9 @@ cfg
 错误处理（assert关键字）:
 
 ```js
-quicksort = ?xs (
+quicksort = λxs (
     ys = quicksort-impl xs;
-    assert ys == mergesort xs;
+    assert (ys == mergesort xs);
     ys
 );
 (quicksort [3,1,2])  --->  [1,2,3]
@@ -409,7 +464,7 @@ quicksort = ?xs (
 错误处理（error关键字）:
 
 ```js
-quicksort = ?xs (
+quicksort = λxs (
     ys = quicksort-impl xs;
     if (ys /= mergesort xs)
     then error "the sort result is wrong"
@@ -429,8 +484,8 @@ quicksort = ?xs (
 错误处理（assume关键字）:
 
 ```js
-div = ?a ?b (
-    assume b != 0;
+div = λa λb (
+    assume (b /= 0);
     a // b
 );
 (div 4 2)  --->  2
@@ -439,7 +494,7 @@ div = ?a ?b (
 错误处理（blame关键字）:
 
 ```js
-div = ?a ?b (
+div = λa λb (
     if b == 0 then blame "The divisor cannot be zero" else a // b
 );
 (div 4 2)  --->  2
@@ -450,7 +505,7 @@ div = ?a ?b (
 错误处理（deflect关键字）:
 
 ```js
-quicksort = ?xs (
+quicksort = λxs (
     ys = deflect (quicksort-impl xs);
     ys
 );
@@ -470,32 +525,37 @@ x = opt (fib 20); x
 opt 关键字用于JIT编译:
 
 ```js
-f = ?a ?b (fib a + b);
-g = opt (f 2)   ===>   g = ?b (fib 2 + b)
+f = λa λb (fib a + b);
+g = opt (f 2)   ===>   g = λb (fib 2 + b)
 
-f = ?a ?b (a * a + b);
-g = opt (f 2)   ===>   g = ?b (4 + b);
+f = λa λb (a * a + b);
+g = opt (f 2)   ===>   g = λb (4 + b);
 ```
 
 复杂一点的例子 (不太确定能不能自动优化，也许需要手动重写为let形式)
 
 ```js
-for (range 10) (?n (for (range 100) (?m (opt (f n) m))))
-===>  for (range 10) (?n (_g = (f n); for (range 100) (?m (_g m))))
+for (range 10) (λn (for (range 100) (λm (opt (f n) m))))
+===>  for (range 10) (λn (_g = (f n); for (range 100) (λm (_g m))))
 ```
 
-### 委派 (待定)
+### 委派(dispatch) / typeclass / adhoc polymorphism (待定)
+
+*这块并没有想好，暂不实现，仅用作思路记录，目前忽略这部分文档*
+
+一种简单的思路是类似动态 overload ，然后利用 partial eval 消除动态开销
 
 ```js
 
-div = ?(a: Int) ?(b: Int) (c: Int = a // b; c);
-div = ?(a: Float) ?(b: Float) (c: Float = a // b; c);
+div = λ(a: Int) λ(b: Int) (c: Int = a // b; c);
+div = λ(a: Float) λ(b: Float) (c: Float = a // b; c);
 ...
 
 ===>
 
-div : ?(a: Int) ?(b: Int) (c: Int; c) | ?(a: Float) ?(b: Float) (c: Float; c);
-div = ?a ?b (if (typefit a Int and typefit b Int) then (a // b) elif (typefit a Float and typefit b Float) then (a / b) else impossible)
+div : λ(a: Int) λ(b: Int) (c: Int; c) | λ(a: Float) λ(b: Float) (c: Float; c);
+div = λa λb (if (typefit a Int and typefit b Int) then (a // b) elif (typefit a Float and typefit b Float) then (a / b) else impossible)
 ...
-
 ```
+
+另一种思路是传递类型参数 及 Evidence Dictionary Passing，然后同样可以利用 partial eval 消除动态开销
